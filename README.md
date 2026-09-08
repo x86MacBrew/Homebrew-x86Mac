@@ -12,7 +12,7 @@ This repository is the distribution tap. It is useful immediately as a host elig
 
 ## Initial contract
 
-**Supported:** physical Intel Macs (`x86_64`) on macOS 15, a Homebrew-compatible client at `/usr/local`, and formulae explicitly listed in a signed release manifest.
+**Supported:** physical Intel Macs (`x86_64`) on macOS 15, a Homebrew-compatible client at `/usr/local`, and formulae explicitly listed in a versioned release manifest.
 
 **Not promised:** every upstream formula, casks, macOS security updates, or a bottle that has not passed installation testing on a clean target host.
 
@@ -34,7 +34,7 @@ The generated formula is not committed until the source archive is released and 
 2. On each isolated Intel builder, run `scripts/build-bottle.sh <formula>`.
 3. Install the resulting bottle on a clean Intel macOS 15 test host with `scripts/verify-bottle.sh <formula>`.
 4. Add the verified bottle URL and SHA-256 to `config/release-manifest.yml`.
-5. Create a signed `x86macbrew-doctor` source release, then run `scripts/render-doctor-formula.sh VERSION RELEASE_URL` and commit its output.
+5. Create a versioned `x86macbrew-doctor` source release, then run `scripts/render-doctor-formula.sh VERSION RELEASE_URL` and commit its output.
 6. Publish only from a protected release environment after reviewing the manifest, bottle checksums, logs, and provenance.
 
 ## Client fork timing
