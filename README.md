@@ -16,6 +16,10 @@ This repository is the distribution tap. It is useful immediately as a host elig
 
 **Not promised:** every upstream formula, casks, macOS security updates, or a bottle that has not passed installation testing on a clean target host.
 
+Current source-build candidates and their validation state are recorded in
+[docs/package-status.md](docs/package-status.md). Source-build validation does
+not imply that a bottle has been published.
+
 ## User workflow
 
 After the repository and its first source release exist:
