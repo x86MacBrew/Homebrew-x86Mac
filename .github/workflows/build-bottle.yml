@@ -1,0 +1,25 @@
+name: Build Intel bottle
+on:
+  workflow_dispatch:
+    inputs:
+      formula:
+        description: Reviewed formula name to build
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  build:
+    # Protected dispatch only. Never expose persistent Intel builders to PR code.
+    runs-on: [self-hosted, macos, x86_64, intelbrew-macos15]
+    environment: bottle-build
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/check-repository.sh
+      - run: scripts/build-bottle.sh "${{ inputs.formula }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: intelbrew-${{ inputs.formula }}
+          path: |
+            *.bottle.tar.gz
+            *.bottle.json

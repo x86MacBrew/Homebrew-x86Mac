@@ -1,0 +1,10 @@
+supported:
+  architecture: x86_64
+  prefix: /usr/local
+  macos_major: '15'
+  cpu_baseline: ssse3
+release_requirements:
+  - build_from_source
+  - formula_test
+  - clean_host_install
+  - runtime_smoke_test

@@ -1,0 +1,46 @@
+#!/bin/sh
+set -eu
+
+project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+support_file="$project_root/config/support.yml"
+if [ ! -r "$support_file" ]; then
+  support_file="$project_root/share/x86macbrew/support.yml"
+fi
+[ -r "$support_file" ] || { printf '%s\n' "x86MacBrew: support policy missing" >&2; exit 2; }
+
+if [ "${1:-}" = "--help" ]; then
+  printf '%s\n' "usage: x86macbrew-doctor"
+  exit 0
+fi
+
+read_policy() {
+  ruby -ryaml -e 'value = YAML.load_file(ARGV[0]).dig(*ARGV[1].split(".")); abort "missing policy value" if value.nil?; puts value' "$support_file" "$1"
+}
+
+expected_arch=$(read_policy supported.architecture)
+expected_prefix=$(read_policy supported.prefix)
+expected_macos=$(read_policy supported.macos_major)
+actual_arch=$(uname -m)
+actual_macos=$(sw_vers -productVersion)
+actual_major=${actual_macos%%.*}
+pass=0
+fail=0
+check() {
+  if [ "$2" = "$3" ]; then
+    printf '%s\n' "PASS  $1: $3"; pass=$((pass + 1))
+  else
+    printf '%s\n' "FAIL  $1: expected $2, got $3"; fail=$((fail + 1))
+  fi
+}
+
+printf '%s\n' "x86MacBrew host diagnostic"
+check architecture "$expected_arch" "$actual_arch"
+check macOS-major "$expected_macos" "$actual_major"
+if command -v brew >/dev/null 2>&1; then
+  actual_prefix=$(brew --prefix 2>/dev/null || printf '%s' unavailable)
+  check brew-prefix "$expected_prefix" "$actual_prefix"
+else
+  printf '%s\n' "FAIL  brew: command is not available"; fail=$((fail + 1))
+fi
+printf '%s\n' "Result: $pass passed, $fail failed"
+[ "$fail" -eq 0 ]

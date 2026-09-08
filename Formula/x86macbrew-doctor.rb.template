@@ -1,0 +1,17 @@
+class X86macbrewDoctor < Formula
+  desc "Diagnose whether an Intel Mac meets x86MacBrew's support contract"
+  homepage "https://github.com/x86MacBrew/homebrew-x86mac"
+  url "__RELEASE_URL__"
+  version "__VERSION__"
+  sha256 "__SHA256__"
+  license "MIT"
+
+  def install
+    bin.install "bin/x86macbrew-doctor"
+    (share/"x86macbrew").install "config/support.yml"
+  end
+
+  test do
+    assert_match "usage: x86macbrew-doctor", shell_output("#{bin}/x86macbrew-doctor --help 2>&1", 0)
+  end
+end
