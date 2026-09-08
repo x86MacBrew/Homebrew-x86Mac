@@ -1,9 +1,9 @@
 class X86macbrewDoctor < Formula
   desc "Diagnose whether an Intel Mac meets x86MacBrew's support contract"
   homepage "https://github.com/x86MacBrew/homebrew-x86mac"
-  url "__RELEASE_URL__"
-  version "__VERSION__"
-  sha256 "__SHA256__"
+  url "https://github.com/x86MacBrew/Homebrew-x86Mac/releases/download/v0.1.0/x86macbrew-doctor-0.1.0.tar.gz"
+  version "0.1.0"
+  sha256 "86fd451c72ff4691eceb0c683fcb6aa39dedc9b5107820c03ddd8150591515fb"
   license "BSD-2-Clause"
 
   def install
