@@ -49,21 +49,21 @@ fi
 
 # --- formula integrity ----------------------------------------------------
 must_reject "a class name that disagrees with the filename" \
-  "sed -i '' 's/^class Jq/class Jqq/' Formula/j/jq.rb"
+  "sed -i '' 's/^class X86macbrewDoctor/class X86macbrewDocttor/' Formula/x86macbrew-doctor.rb"
 must_reject "a non-HTTPS formula url" \
-  "sed -i '' 's|url \"https://github.com/jqlang|url \"http://github.com/jqlang|' Formula/j/jq.rb"
+  "sed -i '' 's|^  url \"https://|  url \"http://|' Formula/x86macbrew-doctor.rb"
 must_reject "a non-HTTPS homepage" \
-  "sed -i '' 's|homepage \"https://|homepage \"http://|' Formula/o/oniguruma.rb"
+  "sed -i '' 's|homepage \"https://|homepage \"http://|' Formula/x86macbrew-doctor.rb"
 must_reject "a malformed sha256" \
-  "sed -i '' 's/^  sha256 \"71b8/  sha256 \"ZZZZ/' Formula/j/jq.rb"
+  "sed -i '' 's/^  sha256 \"86fd/  sha256 \"ZZZZ/' Formula/x86macbrew-doctor.rb"
 must_reject "an unresolved release placeholder" \
   "sed -i '' 's|^  version \"0.1.0\"|  version \"__VERSION__\"|' Formula/x86macbrew-doctor.rb"
 
 # --- tap dependency boundary ---------------------------------------------
 must_reject "a dependency on a foreign tap" \
-  "sed -i '' 's|x86macbrew/x86mac/oniguruma|someoneelse/tap/oniguruma|' Formula/j/jq.rb"
+  "printf '%s\\n' 'class ForeignDependency < Formula' '  url \"https://example.com/source.tar.gz\"' '  sha256 \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"' '  depends_on \"someoneelse/tap/oniguruma\"' 'end' > Formula/foreign-dependency.rb"
 must_reject "a tap dependency this tap does not define" \
-  "sed -i '' 's|x86macbrew/x86mac/oniguruma|x86macbrew/x86mac/missinglib|' Formula/j/jq.rb"
+  "printf '%s\\n' 'class MissingDependency < Formula' '  url \"https://example.com/source.tar.gz\"' '  sha256 \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\"' '  depends_on \"x86macbrew/x86mac/missinglib\"' 'end' > Formula/missing-dependency.rb"
 
 # --- tap-owned artifacts must be recorded --------------------------------
 # These are the fail-open cases: a version bump with no manifest entry must

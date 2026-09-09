@@ -1,17 +1,22 @@
 # Package status
 
-## Source-build validation
+## Stable public tap
 
 | Formula | Version | Target | Dependency closure | Result |
 | --- | --- | --- | --- | --- |
 | `x86macbrew-doctor` | 0.1.0 | Intel macOS 15 | None | Installed from the public tap and passed its support-contract diagnostic. Superseded locally by 0.2.0, which is not yet released. |
-| `oniguruma` | 6.9.10 | Intel macOS 15 | None | Built from the upstream release's generated `configure` script and passed `onig-config --prefix`. |
-| `jq` | 1.8.2 | Intel macOS 15 | `x86macbrew/x86mac/oniguruma` | Source release built and returned `2` for `.bar`; the standalone test used jq's bundled Oniguruma fallback, while the formula explicitly requests the tap-local dependency. |
 
-`scripts/test-doctor.sh` covers the diagnostic's option handling, exit codes,
-JSON output, and policy parsing on every architecture; it runs in CI.
+## Candidate branch
 
-These entries are source-build candidates only. No x86MacBrew bottles have
-been published for them yet. A formula becomes bottle-supported only after a
-clean-host installation, runtime test, uploaded bottle, checksum, and release
-manifest entry.
+`oniguruma` 6.9.10 and `jq` 1.8.2 are retained on the
+[`candidates/jq-oniguruma`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/jq-oniguruma)
+branch. They are not shipped from `main` and are not supported for users.
+
+| Formula | Direct-build observation | Promotion blocker |
+| --- | --- | --- |
+| `oniguruma` | The upstream release's generated `configure` script built on Intel macOS 15 and `onig-config --prefix` passed. | Install and test through the actual x86MacBrew tap on a clean host. |
+| `jq` | The source release built and returned `2` for `.bar`; this standalone test used jq's bundled Oniguruma fallback. | Verify the public formula's explicit x86MacBrew Oniguruma dependency graph on a clean host. |
+
+No x86MacBrew bottles have been published. A formula is promoted to `main`
+only after the source build, formula test, clean-host installation, runtime
+smoke test, artifact checksum, and provenance evidence are complete.
