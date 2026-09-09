@@ -16,7 +16,7 @@ while separating three components that can evolve independently.
 | | |
 | --- | --- |
 | Bottles published | **None** |
-| Source releases | `x86macbrew-doctor` 0.1.0 (prerelease, unsigned) |
+| Source releases | `x86macbrew-doctor` 0.2.0 (prerelease, unsigned) |
 | Artifact signing | Not implemented |
 | Maintainers | 1 |
 

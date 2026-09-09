@@ -55,9 +55,9 @@ must_reject "a non-HTTPS formula url" \
 must_reject "a non-HTTPS homepage" \
   "sed -i '' 's|homepage \"https://|homepage \"http://|' Formula/x86macbrew-doctor.rb"
 must_reject "a malformed sha256" \
-  "sed -i '' 's/^  sha256 \"86fd/  sha256 \"ZZZZ/' Formula/x86macbrew-doctor.rb"
+  "sed -i '' 's/^  sha256 \"[0-9a-f]*/  sha256 \"ZZZZ/' Formula/x86macbrew-doctor.rb"
 must_reject "an unresolved release placeholder" \
-  "sed -i '' 's|^  version \"0.1.0\"|  version \"__VERSION__\"|' Formula/x86macbrew-doctor.rb"
+  "sed -i '' 's|^  version \".*\"|  version \"__VERSION__\"|' Formula/x86macbrew-doctor.rb"
 
 # --- tap dependency boundary ---------------------------------------------
 must_reject "a dependency on a foreign tap" \
@@ -69,13 +69,13 @@ must_reject "a tap dependency this tap does not define" \
 # These are the fail-open cases: a version bump with no manifest entry must
 # not pass merely because no entry was found to compare against.
 must_reject "a tap-owned version bump with no manifest entry" \
-  "sed -i '' -e 's|version \"0.1.0\"|version \"0.9.9\"|' -e 's|download/v0.1.0/x86macbrew-doctor-0.1.0.tar.gz|download/v0.9.9/evil.tar.gz|' Formula/x86macbrew-doctor.rb"
+  "sed -i '' -e 's|^  version \".*\"|  version \"0.9.9\"|' -e 's|^  url \".*\"|  url \"https://github.com/x86MacBrew/Homebrew-x86Mac/releases/download/v0.9.9/evil.tar.gz\"|' Formula/x86macbrew-doctor.rb"
 must_reject "a tap-owned formula with no version" \
-  "sed -i '' '/^  version \"0.1.0\"/d' Formula/x86macbrew-doctor.rb"
+  "sed -i '' '/^  version \".*\"/d' Formula/x86macbrew-doctor.rb"
 must_reject "a swapped tap-owned artifact url" \
-  "sed -i '' 's|download/v0.1.0/x86macbrew-doctor-0.1.0.tar.gz|download/v0.1.0/evil.tar.gz|' Formula/x86macbrew-doctor.rb"
+  "sed -i '' 's|^  url \".*\"|  url \"https://github.com/x86MacBrew/Homebrew-x86Mac/releases/download/evil.tar.gz\"|' Formula/x86macbrew-doctor.rb"
 must_reject "a swapped tap-owned artifact checksum" \
-  "sed -i '' 's/86fd451c/86fd451d/' Formula/x86macbrew-doctor.rb"
+  "sed -i '' 's/^  sha256 \"[0-9a-f]*/  sha256 \"f/' Formula/x86macbrew-doctor.rb"
 must_reject "a deleted source_releases entry" \
   "python3 -c \"
 import pathlib
