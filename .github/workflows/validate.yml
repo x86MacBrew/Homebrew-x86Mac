@@ -16,3 +16,5 @@ jobs:
         run: scripts/check-repository.sh
       - name: Test host diagnostic
         run: scripts/test-doctor.sh
+      - name: Test that the validator rejects what it claims to
+        run: scripts/test-validator.sh
