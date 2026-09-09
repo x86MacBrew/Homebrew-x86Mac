@@ -11,7 +11,7 @@ calibrate trust against the claim rather than the reality.
 | --- | --- |
 | Maintainers | One (`@Cooldode`), acting as sole owner of the organization |
 | Published bottles | None |
-| Published source releases | `x86macbrew-doctor` 0.1.0, marked prerelease, unsigned |
+| Published source releases | `x86macbrew-doctor` 0.1.0 and 0.2.0, marked prerelease, unsigned |
 | Artifact signing | Not implemented; no signing key exists |
 | Advisory feed | Not implemented |
 | Branch protection on `main` | Not enabled |

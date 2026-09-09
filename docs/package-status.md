@@ -4,7 +4,7 @@
 
 | Formula | Version | Target | Dependency closure | Result |
 | --- | --- | --- | --- | --- |
-| `x86macbrew-doctor` | 0.1.0 | Intel macOS 15 | None | Installed from the public tap and passed its support-contract diagnostic. Superseded locally by 0.2.0, which is not yet released. |
+| `x86macbrew-doctor` | 0.2.0 | Intel macOS 15 | None | Released as an unsigned prerelease. The v0.2.0 source archive passed reproducibility, extraction, and diagnostic checks. |
 
 ## Candidate branch
 
