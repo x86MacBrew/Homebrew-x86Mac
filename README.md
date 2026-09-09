@@ -16,7 +16,7 @@ while separating three components that can evolve independently.
 | | |
 | --- | --- |
 | Bottles published | **None** |
-| Source releases | `x86macbrew-doctor` 0.1.0 (prerelease, unsigned) |
+| Source releases | `x86macbrew-doctor` 0.2.0 (prerelease, unsigned) |
 | Artifact signing | Not implemented |
 | Maintainers | 1 |
 
@@ -53,9 +53,11 @@ tooling for a supported Intel host.
 
 See [config/support.yml](config/support.yml) for machine-readable policy.
 
-Current source-build candidates and their validation state are recorded in
-[docs/package-status.md](docs/package-status.md). Source-build validation does
-not imply that a bottle has been published.
+Experimental formula candidates are maintained outside the stable public tap
+on the [`candidates/jq-oniguruma`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/jq-oniguruma)
+branch. Their build observations are recorded in
+[docs/package-status.md](docs/package-status.md); they are not supported
+formulae and are intentionally unavailable from `main`.
 
 ## User workflow
 

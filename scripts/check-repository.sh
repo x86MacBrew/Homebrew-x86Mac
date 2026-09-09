@@ -186,8 +186,7 @@ end
 # A formula this project publishes itself must point at an artifact the
 # manifest actually records. Skipping formulae with no matching entry would
 # fail open: bumping a version without adding an entry would pass silently.
-# Third-party formulae (jq, oniguruma) fetch from their own upstreams and are
-# deliberately exempt.
+# Formulae that fetch from third-party upstreams are deliberately exempt.
 TAP_ARTIFACT_HOST = %r{\Ahttps://github\.com/x86MacBrew/}i
 
 tap_owned = 0

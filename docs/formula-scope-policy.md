@@ -24,6 +24,14 @@ A formula revision can be promoted to this tap manifest only when evidence exist
 - runtime smoke test,
 - artifact checksum and provenance metadata.
 
+## Candidate branches
+
+Experimental formulae belong on a `candidates/<scope>` branch, not under
+`Formula/` on `main`. A candidate may record direct source-build observations,
+but it must not be presented as a stable public-tap formula. Promotion happens
+formula by formula through a reviewed pull request after every requirement
+above is met.
+
 ## Rollback policy
 
 If regressions or security concerns are found, remove the bottle entry from the release manifest, publish a signed advisory, and keep prior evidence artifacts for auditability.
