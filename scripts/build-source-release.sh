@@ -17,6 +17,7 @@ fi
 
 scripts/check-repository.sh >/dev/null
 scripts/test-doctor.sh >/dev/null
+scripts/test-validator.sh >/dev/null
 
 name="x86macbrew-doctor-$version"
 staging=$(mktemp -d)

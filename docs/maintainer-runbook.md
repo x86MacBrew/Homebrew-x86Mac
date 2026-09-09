@@ -8,9 +8,10 @@
 
 ## Release checklist
 
-1. Validate tap integrity with `scripts/check-repository.sh` and the
-   diagnostic behaviour with `scripts/test-doctor.sh`. Both run in CI on every
-   pull request and push to `main`.
+1. Validate tap integrity with `scripts/check-repository.sh`, diagnostic
+   behaviour with `scripts/test-doctor.sh`, and the validator's own rules with
+   `scripts/test-validator.sh`. All three run in CI on every pull request and
+   push to `main`, and gate `scripts/build-source-release.sh`.
 2. Build reviewed formula bottle on protected Intel builder with `scripts/build-bottle.sh <formula>`.
 3. Verify installation/audit on clean Intel host with `scripts/verify-bottle.sh <formula>`.
 4. Record evidence links and checksums in `config/release-manifest.yml`.

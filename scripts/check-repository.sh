@@ -2,7 +2,7 @@
 set -eu
 repository_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$repository_root"
-ruby -ryaml <<'RUBY'
+ruby -ryaml -rdate <<'RUBY'
 SUPPORT_PATH = 'config/support.yml'
 MANIFEST_PATH = 'config/release-manifest.yml'
 SHA256 = /\A[0-9a-f]{64}\z/
@@ -12,8 +12,25 @@ def fail!(failures, message)
   failures << message
 end
 
-support = YAML.load_file(SUPPORT_PATH)
-manifest = YAML.load_file(MANIFEST_PATH)
+# YAML.load_file deserialises arbitrary Ruby objects on the Ruby versions this
+# project targets. CI runs this script from the pull request's own checkout, so
+# the input is untrusted. safe_load takes keywords from 3.1 and positionals
+# before that.
+def load_yaml(path)
+  raw = File.read(path)
+  if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('3.1')
+    YAML.safe_load(raw, permitted_classes: [Date, Time], aliases: false)
+  else
+    YAML.safe_load(raw, [Date, Time], [], false)
+  end
+rescue Psych::DisallowedClass, Psych::BadAlias => e
+  abort "FAIL  #{path} contains disallowed YAML content: #{e.message}"
+rescue Psych::SyntaxError => e
+  abort "FAIL  #{path} is not valid YAML: #{e.message}"
+end
+
+support = load_yaml(SUPPORT_PATH)
+manifest = load_yaml(MANIFEST_PATH)
 
 abort 'FAIL  support policy must be a mapping' unless support.is_a?(Hash)
 abort 'FAIL  manifest must be a mapping' unless manifest.is_a?(Hash)
@@ -166,19 +183,39 @@ formulae.each do |path|
   end
 end
 
-# A published formula must point at an artifact this manifest actually records.
+# A formula this project publishes itself must point at an artifact the
+# manifest actually records. Skipping formulae with no matching entry would
+# fail open: bumping a version without adding an entry would pass silently.
+# Third-party formulae (jq, oniguruma) fetch from their own upstreams and are
+# deliberately exempt.
+TAP_ARTIFACT_HOST = %r{\Ahttps://github\.com/x86MacBrew/}i
+
+tap_owned = 0
 formulae.each do |path|
   body = File.read(path)
   name = File.basename(path, '.rb')
+  url = body[/^\s*url\s+"([^"]+)"/, 1]
+  next if url.nil? || !url.match?(TAP_ARTIFACT_HOST)
+
+  tap_owned += 1
   version = body[/^\s*version\s+"([^"]+)"/, 1]
   sha = body[/^\s*sha256\s+"([^"]+)"/, 1]
-  next unless version && released.key?([name, version])
+
+  if version.nil?
+    fail!(failures, "#{path} publishes a tap-owned artifact and must declare a version")
+    next
+  end
 
   entry = released[[name, version]]
+  if entry.nil?
+    fail!(failures, "#{path} points at tap-owned #{name} #{version}, which has no source_releases entry")
+    next
+  end
+
   unless entry['sha256'] == sha
     fail!(failures, "#{path} sha256 does not match source_releases entry #{name} #{version}")
   end
-  unless body.include?(entry['url'])
+  unless url == entry['url']
     fail!(failures, "#{path} url does not match source_releases entry #{name} #{version}")
   end
 end
@@ -186,7 +223,7 @@ end
 if failures.empty?
   puts "PASS  support policy and release manifest schema"
   puts "PASS  #{formulae.length} formula file(s): class name, HTTPS, checksum, tap dependencies"
-  puts "PASS  formula artifacts match recorded source releases"
+  puts "PASS  #{tap_owned} tap-owned artifact(s) match their source_releases entry"
 else
   failures.each { |message| warn "FAIL  #{message}" }
   abort "#{failures.length} validation failure(s)"
