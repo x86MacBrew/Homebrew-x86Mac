@@ -1,56 +1,178 @@
 #!/bin/sh
 set -eu
 
+VERSION=0.2.0
+
+usage() {
+  cat <<'USAGE'
+usage: x86macbrew-doctor [--json] [--version] [--help]
+
+Report whether this host satisfies the x86MacBrew support contract.
+
+Options:
+  --json     Emit machine-readable JSON instead of human-readable text.
+  --version  Print the diagnostic version and exit.
+  --help     Print this message and exit.
+
+Exit status:
+  0  every supported policy value matched this host
+  1  at least one check failed; the host is out of support
+  2  the support policy could not be read
+USAGE
+}
+
+format=text
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --help|-h) usage; exit 0 ;;
+    --version) printf '%s\n' "x86macbrew-doctor $VERSION"; exit 0 ;;
+    --json) format=json ;;
+    --) shift; break ;;
+    *)
+      printf '%s\n' "x86macbrew-doctor: unknown option $1" >&2
+      usage >&2
+      exit 64
+      ;;
+  esac
+  shift
+done
+
+# Resolve the policy from the repository checkout first, then the installed
+# layout Homebrew creates (bin/ plus share/x86macbrew/).
 project_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 support_file="$project_root/config/support.yml"
 if [ ! -r "$support_file" ]; then
   support_file="$project_root/share/x86macbrew/support.yml"
 fi
-[ -r "$support_file" ] || { printf '%s\n' "x86MacBrew: support policy missing" >&2; exit 2; }
-
-if [ "${1:-}" = "--help" ]; then
-  printf '%s\n' "usage: x86macbrew-doctor"
-  exit 0
+if [ ! -r "$support_file" ]; then
+  printf '%s\n' "x86macbrew-doctor: support policy not found" >&2
+  exit 2
 fi
 
+# The policy is a fixed two-level mapping. Parsing it here rather than shelling
+# out to Ruby keeps the user-facing diagnostic free of a runtime that Apple has
+# deprecated and that a degraded host may not have.
 read_policy() {
-  ruby -ryaml -e 'value = YAML.load_file(ARGV[0]).dig(*ARGV[1].split(".")); abort "missing policy value" if value.nil?; puts value' "$support_file" "$1"
+  value=$(awk -v section="$1" -v key="$2" '
+    /^[^ \t#]/ { in_section = ($0 == section ":"); next }
+    in_section {
+      line = $0
+      sub(/^[ \t]+/, "", line)
+      if (index(line, key ":") == 1) {
+        sub(/^[^:]*:[ \t]*/, "", line)
+        sub(/[ \t]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "$support_file")
+  value=${value%\'}; value=${value#\'}
+  value=${value%\"}; value=${value#\"}
+  printf '%s' "$value"
 }
 
-expected_arch=$(read_policy supported.architecture)
-expected_prefix=$(read_policy supported.prefix)
-expected_macos=$(read_policy supported.macos_major)
-expected_cpu=$(read_policy supported.cpu_baseline | tr '[:lower:]' '[:upper:]')
-actual_arch=$(uname -m)
-actual_macos=$(sw_vers -productVersion)
-actual_major=${actual_macos%%.*}
-pass=0
-fail=0
-check() {
-  if [ "$2" = "$3" ]; then
-    printf '%s\n' "PASS  $1: $3"; pass=$((pass + 1))
+expected_arch=$(read_policy supported architecture)
+expected_prefix=$(read_policy supported prefix)
+expected_macos=$(read_policy supported macos_major)
+expected_cpu=$(read_policy supported cpu_baseline | tr '[:lower:]' '[:upper:]')
+
+for pair in "architecture=$expected_arch" "prefix=$expected_prefix" \
+            "macos_major=$expected_macos" "cpu_baseline=$expected_cpu"; do
+  if [ -z "${pair#*=}" ]; then
+    printf '%s\n' "x86macbrew-doctor: support policy is missing supported.${pair%%=*}" >&2
+    exit 2
+  fi
+done
+
+passed=0
+failed=0
+records=""
+
+sanitize() {
+  printf '%s' "$1" | tr '|\n\t' '   ' | sed -e 's/  */ /g' -e 's/^ //' -e 's/ $//'
+}
+
+record() {
+  # name | expected | actual | status
+  #
+  # Records are newline-terminated and pipe-delimited, so a value containing
+  # either character would corrupt both output formats. Collapse them here so
+  # no individual check can break the record stream.
+  records="${records}$(sanitize "$1")|$(sanitize "$2")|$(sanitize "$3")|$4
+"
+  if [ "$4" = pass ]; then
+    passed=$((passed + 1))
   else
-    printf '%s\n' "FAIL  $1: expected $2, got $3"; fail=$((fail + 1))
+    failed=$((failed + 1))
   fi
 }
 
-printf '%s\n' "x86MacBrew host diagnostic"
-check architecture "$expected_arch" "$actual_arch"
-check macOS-major "$expected_macos" "$actual_major"
+check_equal() {
+  if [ "$2" = "$3" ]; then
+    record "$1" "$2" "$3" pass
+  else
+    record "$1" "$2" "$3" fail
+  fi
+}
+
+check_equal architecture "$expected_arch" "$(uname -m)"
+
+actual_macos=$(sw_vers -productVersion 2>/dev/null || printf 'unavailable')
+check_equal macos-major "$expected_macos" "${actual_macos%%.*}"
+
 if command -v brew >/dev/null 2>&1; then
-  actual_prefix=$(brew --prefix 2>/dev/null || printf '%s' unavailable)
-  check brew-prefix "$expected_prefix" "$actual_prefix"
+  # HOMEBREW_NO_AUTO_UPDATE keeps this read-only: a diagnostic must never
+  # mutate the installation it is inspecting.
+  check_equal brew-prefix "$expected_prefix" \
+    "$(HOMEBREW_NO_AUTO_UPDATE=1 brew --prefix 2>/dev/null || printf 'unavailable')"
 else
-  printf '%s\n' "FAIL  brew: command is not available"; fail=$((fail + 1))
+  record brew-prefix "$expected_prefix" "brew-not-installed" fail
 fi
 
 cpu_features=$(sysctl -n machdep.cpu.features machdep.cpu.leaf7_features 2>/dev/null | tr '[:lower:]' '[:upper:]' || true)
-if [ -n "$cpu_features" ] && printf '%s\n' "$cpu_features" | tr ' ' '\n' | grep -Fx "$expected_cpu" >/dev/null; then
-  printf '%s\n' "PASS  cpu-baseline: $expected_cpu"; pass=$((pass + 1))
+if [ -n "$cpu_features" ] && printf '%s\n' "$cpu_features" | tr ' ' '\n' | grep -Fxq "$expected_cpu"; then
+  record cpu-baseline "$expected_cpu" "$expected_cpu" pass
+elif [ -n "$cpu_features" ]; then
+  record cpu-baseline "$expected_cpu" absent fail
 else
-  actual_cpu=${cpu_features:-unavailable}
-  printf '%s\n' "FAIL  cpu-baseline: expected $expected_cpu, got $actual_cpu"; fail=$((fail + 1))
+  record cpu-baseline "$expected_cpu" unavailable fail
 fi
 
-printf '%s\n' "Result: $pass passed, $fail failed"
-[ "$fail" -eq 0 ]
+if [ "$format" = json ]; then
+  json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+  printf '{\n'
+  printf '  "tool": "x86macbrew-doctor",\n'
+  printf '  "version": "%s",\n' "$VERSION"
+  printf '  "support_policy": "%s",\n' "$(json_escape "$support_file")"
+  printf '  "checks": [\n'
+  first=1
+  printf '%s' "$records" | while IFS='|' read -r name expected actual status; do
+    [ -n "$name" ] || continue
+    [ "$first" -eq 1 ] || printf ',\n'
+    first=0
+    printf '    {"name": "%s", "expected": "%s", "actual": "%s", "status": "%s"}' \
+      "$(json_escape "$name")" "$(json_escape "$expected")" \
+      "$(json_escape "$actual")" "$status"
+  done
+  printf '\n  ],\n'
+  printf '  "passed": %d,\n' "$passed"
+  printf '  "failed": %d,\n' "$failed"
+  printf '  "supported": %s\n' "$([ "$failed" -eq 0 ] && printf 'true' || printf 'false')"
+  printf '}\n'
+else
+  printf '%s\n' "x86MacBrew host diagnostic"
+  printf '%s' "$records" | while IFS='|' read -r name expected actual status; do
+    [ -n "$name" ] || continue
+    if [ "$status" = pass ]; then
+      printf 'PASS  %s: %s\n' "$name" "$actual"
+    else
+      printf 'FAIL  %s: expected %s, got %s\n' "$name" "$expected" "$actual"
+    fi
+  done
+  printf 'Result: %d passed, %d failed\n' "$passed" "$failed"
+  if [ "$failed" -ne 0 ]; then
+    printf '%s\n' "This host is outside the x86MacBrew support contract; see docs/support-matrix.md"
+  fi
+fi
+
+[ "$failed" -eq 0 ]

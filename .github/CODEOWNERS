@@ -1,0 +1,20 @@
+# Every path here changes what users execute or what the project claims about
+# its own safety. Review is required regardless of the author.
+
+*                               @Cooldode
+
+# Anything that becomes code on a user's machine.
+/Formula/                       @Cooldode
+/bin/                           @Cooldode
+/scripts/                       @Cooldode
+
+# The support contract and the record of what is actually published.
+/config/                        @Cooldode
+
+# CI, the bottle builder, and the review boundary itself.
+/.github/                       @Cooldode
+
+# Security posture and governance claims.
+/SECURITY.md                    @Cooldode
+/docs/governance.md             @Cooldode
+/docs/release-policy.md         @Cooldode

@@ -1,3 +1,12 @@
+# Single source of truth for every artifact x86MacBrew publishes.
+#
+# source_releases  signed source archives (tooling this project itself ships)
+# bottles          precompiled Intel binaries promoted through the full
+#                  build -> test -> clean-host install -> smoke test pipeline
+#
+# scripts/check-repository.sh enforces this schema in CI. An artifact that is
+# not listed here is not supported, regardless of what exists on the releases
+# page.
 release: null
 generated_at: null
 support_policy: config/support.yml
@@ -8,4 +17,12 @@ repositories:
 security:
   advisory_feed: null
   signing_key_fingerprint: null
+source_releases:
+  - artifact: x86macbrew-doctor
+    version: 0.1.0
+    tag: v0.1.0
+    url: https://github.com/x86MacBrew/Homebrew-x86Mac/releases/download/v0.1.0/x86macbrew-doctor-0.1.0.tar.gz
+    sha256: 86fd451c72ff4691eceb0c683fcb6aa39dedc9b5107820c03ddd8150591515fb
+    prerelease: true
+    signed: false
 bottles: []
