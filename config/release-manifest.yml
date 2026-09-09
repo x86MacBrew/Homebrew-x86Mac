@@ -1,4 +1,11 @@
 release: null
 generated_at: null
 support_policy: config/support.yml
+repositories:
+  compatibility_client: x86macbrew/brew
+  formula_catalogue: x86macbrew/homebrew-core
+  distribution_tap: x86macbrew/homebrew-x86mac
+security:
+  advisory_feed: null
+  signing_key_fingerprint: null
 bottles: []

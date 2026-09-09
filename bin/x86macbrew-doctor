@@ -20,6 +20,7 @@ read_policy() {
 expected_arch=$(read_policy supported.architecture)
 expected_prefix=$(read_policy supported.prefix)
 expected_macos=$(read_policy supported.macos_major)
+expected_cpu=$(read_policy supported.cpu_baseline | tr '[:lower:]' '[:upper:]')
 actual_arch=$(uname -m)
 actual_macos=$(sw_vers -productVersion)
 actual_major=${actual_macos%%.*}
@@ -42,5 +43,14 @@ if command -v brew >/dev/null 2>&1; then
 else
   printf '%s\n' "FAIL  brew: command is not available"; fail=$((fail + 1))
 fi
+
+cpu_features=$(sysctl -n machdep.cpu.features machdep.cpu.leaf7_features 2>/dev/null | tr '[:lower:]' '[:upper:]' || true)
+if [ -n "$cpu_features" ] && printf '%s\n' "$cpu_features" | tr ' ' '\n' | grep -Fx "$expected_cpu" >/dev/null; then
+  printf '%s\n' "PASS  cpu-baseline: $expected_cpu"; pass=$((pass + 1))
+else
+  actual_cpu=${cpu_features:-unavailable}
+  printf '%s\n' "FAIL  cpu-baseline: expected $expected_cpu, got $actual_cpu"; fail=$((fail + 1))
+fi
+
 printf '%s\n' "Result: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
