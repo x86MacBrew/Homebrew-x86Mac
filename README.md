@@ -1,20 +1,30 @@
 # x86MacBrew
 
-x86MacBrew is an independent continuation project for Intel x86_64 Macs. It preserves familiar Homebrew formula workflows while separating three pieces that must be maintained independently:
+x86MacBrew is an independent continuation project for Intel x86_64 Macs after upstream Homebrew Intel support ends. It preserves familiar Homebrew workflows while separating three components that can evolve independently.
 
 | Component | Repository | Responsibility |
 | --- | --- | --- |
-| Compatibility client | `x86macbrew/brew` | Keep the `brew` command runnable on Intel macOS after upstream removal. |
-| Formula catalogue | `x86macbrew/homebrew-core` | Carry formula revisions and Intel-specific fixes. |
-| This distribution tap | `x86macbrew/homebrew-x86mac` | Publish approved Intel bottles and the `x86macbrew-doctor` tooling. |
+| Compatibility client | `x86macbrew/brew` | Keep the `brew` command runnable on supported Intel macOS after upstream removal. |
+| Formula catalogue | `x86macbrew/homebrew-core` | Carry Intel-focused formula revisions, pins, and fixes. |
+| This distribution tap | `x86macbrew/homebrew-x86mac` | Publish approved Intel bottles and ship `x86macbrew-doctor`. |
 
-This repository is the distribution tap. It is useful immediately as a host eligibility check and release tool; it must be published under a real GitHub organisation before users can install it with `brew tap`.
+This repository is the distribution tap. It publishes release metadata and tooling for a supported Intel host.
 
-## Initial contract
+## Support contract
 
-**Supported:** physical Intel Macs (`x86_64`) on macOS 15, a Homebrew-compatible client at `/usr/local`, and formulae explicitly listed in a versioned release manifest.
+**Supported**
+- Physical Intel Macs (`x86_64`) on macOS 15.
+- Homebrew-compatible client installed at `/usr/local`.
+- Formulae explicitly listed in a versioned release manifest.
+- Bottles that passed source build, `brew test`, clean-host install, and runtime smoke test.
 
-**Not promised:** every upstream formula, casks, macOS security updates, or a bottle that has not passed installation testing on a clean target host.
+**Not promised**
+- Every upstream formula.
+- Casks.
+- Untested bottles.
+- Ongoing macOS platform security updates from Apple.
+
+See `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/config/support.yml` for machine-readable policy.
 
 Current source-build candidates and their validation state are recorded in
 [docs/package-status.md](docs/package-status.md). Source-build validation does
@@ -22,27 +32,33 @@ not imply that a bottle has been published.
 
 ## User workflow
 
-After the repository and its first source release exist:
-
 ```sh
 brew tap x86macbrew/x86mac
 brew install x86macbrew/x86mac/x86macbrew-doctor
 x86macbrew-doctor
 ```
 
-The generated formula is not committed until the source archive is released and its SHA-256 is known. That prevents a placeholder formula from appearing installable.
+If `x86macbrew-doctor` passes, install only formulae included in `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/config/release-manifest.yml`.
+
+## Migration for post-2027 Intel users
+
+See `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/migration-from-upstream-homebrew.md` for the migration path from upstream Homebrew to x86MacBrew-managed components.
 
 ## Maintainer release workflow
 
 1. Run `scripts/check-repository.sh` before review.
-2. On each isolated Intel builder, run `scripts/build-bottle.sh <formula>`.
-3. Install the resulting bottle on a clean Intel macOS 15 test host with `scripts/verify-bottle.sh <formula>`.
-4. Add the verified bottle URL and SHA-256 to `config/release-manifest.yml`.
-5. Create a versioned `x86macbrew-doctor` source release, then run `scripts/render-doctor-formula.sh VERSION RELEASE_URL` and commit its output.
-6. Publish only from a protected release environment after reviewing the manifest, bottle checksums, logs, and provenance.
+2. On an isolated Intel builder, run `scripts/build-bottle.sh <formula>`.
+3. On a clean Intel macOS 15 host, run `scripts/verify-bottle.sh <formula>`.
+4. Record verified metadata and evidence links in `config/release-manifest.yml`.
+5. Create a versioned `x86macbrew-doctor` source release and run `scripts/render-doctor-formula.sh VERSION RELEASE_URL`.
+6. Publish from a protected release environment after checksum, logs, and provenance review.
 
-## Client fork timing
+## Governance, scope, and runbooks
 
-Until upstream removes the Intel client, a third-party tap can use the existing `brew` program. Before that removal, freeze a known-good upstream revision, make `x86macbrew/brew` CI pass on the supported Intel target, and change this tap's install guidance to use that client. Formula metadata stays separate so client maintenance does not become a permanent fork of the catalogue.
-
-See [the architecture decision record](docs/ADR-001-continuation-boundary.md) and [release policy](docs/release-policy.md).
+- Architecture boundary: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/ADR-001-continuation-boundary.md`
+- Release policy: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/release-policy.md`
+- Support matrix: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/support-matrix.md`
+- Formula scope policy: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/formula-scope-policy.md`
+- Migration guide: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/migration-from-upstream-homebrew.md`
+- Maintainer runbook: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/maintainer-runbook.md`
+- Governance and sustainability: `/home/runner/work/Homebrew-x86Mac/Homebrew-x86Mac/docs/governance.md`
