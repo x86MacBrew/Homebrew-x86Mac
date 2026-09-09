@@ -7,7 +7,12 @@ permissions:
   contents: read
 jobs:
   validate:
+    # Architecture-independent checks. Intel-only verification happens on the
+    # protected builder, not here.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - run: scripts/check-repository.sh
+      - name: Validate repository schema, formulae, and shell syntax
+        run: scripts/check-repository.sh
+      - name: Test host diagnostic
+        run: scripts/test-doctor.sh
