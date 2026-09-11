@@ -39,7 +39,11 @@ source_releases:
     sha256: 0dec6a5a8b75762ae69b141a85f4df2b829cf9d3f82daca31c800a0bd92ebe3f
     prerelease: true
     signed: false
-candidate_formulae: []
+candidate_formulae:
+  - formula: git
+    version: 2.55.0
+    source_sha256: 457fdb04dc8728e007d4688695e6912e6f680727920f2a40bf11eacc17505357
+    status: candidate
 source_build_formulae:
   - formula: oniguruma
     version: 6.9.10
