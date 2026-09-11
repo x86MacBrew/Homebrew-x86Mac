@@ -12,10 +12,10 @@
 [`candidates/jq-oniguruma`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/jq-oniguruma)
 branch. They are not shipped from `main` and are not supported for users.
 
-| Formula | Direct-build observation | Promotion blocker |
+| Formula | First-builder observation | Promotion blocker |
 | --- | --- | --- |
-| `oniguruma` | The upstream release's generated `configure` script built on Intel macOS 15 and `onig-config --prefix` passed. | Install and test through the actual x86MacBrew tap on a clean host. |
-| `jq` | The source release built and returned `2` for `.bar`; this standalone test used jq's bundled Oniguruma fallback. | Verify the public formula's explicit x86MacBrew Oniguruma dependency graph on a clean host. |
+| `oniguruma` | In a fresh isolated x86MacBrew client prefix on Intel macOS 15.7.7 with CLT 26.3: source install, `brew test`, `brew audit --strict`, and `onig-config --prefix` passed. | Independent clean-host install and runtime test; bottle build, provenance, and verification before any bottle publication. |
+| `jq` | In that same prefix, the public candidate formula built against the explicit x86MacBrew `oniguruma` dependency. Source install, `brew test`, `brew audit --strict`, `jq .bar`, and dynamic linkage to `opt/oniguruma/lib/libonig.5.dylib` passed. | Independent clean-host install and runtime test; bottle build, provenance, and verification before any bottle publication. |
 
 No x86MacBrew bottles have been published. A formula is promoted to `main`
 only after the source build, formula test, clean-host installation, runtime
