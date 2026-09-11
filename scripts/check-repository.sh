@@ -55,7 +55,7 @@ unless requirements.is_a?(Array) && !requirements.empty?
 end
 
 # --------------------------------------------------------------------- manifest
-%w[release generated_at support_policy repositories security source_releases source_build_formulae bottles].each do |key|
+%w[release generated_at support_policy repositories security source_releases candidate_formulae source_build_formulae bottles].each do |key|
   fail!(failures, "missing manifest key #{key}") unless manifest.key?(key)
 end
 
@@ -102,6 +102,38 @@ Array(source_releases).each_with_index do |entry, index|
     fail!(failures, "source_releases[#{index}].url must use HTTPS")
   end
   released[[entry['artifact'], entry['version'].to_s]] = entry
+end
+
+# ----------------------------------------------------------- candidate formulae
+# A candidate is recorded so its checksum is pinned while it is evaluated, but
+# it carries no tier and no support claim. Candidates live only on a
+# candidates/* branch; see docs/candidate-process.md.
+candidates = manifest['candidate_formulae'] || []
+fail!(failures, 'candidate_formulae must be an array') unless candidates.is_a?(Array)
+
+candidate_named = {}
+Array(candidates).each_with_index do |entry, index|
+  unless entry.is_a?(Hash)
+    fail!(failures, "candidate_formulae[#{index}] must be a mapping")
+    next
+  end
+  %w[formula version source_sha256 status].each do |key|
+    fail!(failures, "candidate_formulae[#{index}].#{key} must be set") unless entry.key?(key)
+  end
+  unless entry['source_sha256'].to_s.match?(SHA256)
+    fail!(failures, "candidate_formulae[#{index}].source_sha256 must be 64 lowercase hex characters")
+  end
+  # Anything other than 'candidate' here would be a tier claim made in the
+  # wrong section, bypassing the promotion gates.
+  unless entry['status'] == 'candidate'
+    fail!(failures, "candidate_formulae[#{index}].status must be 'candidate'")
+  end
+  candidate_named[entry['formula']] = entry
+end
+
+# A formula cannot be a candidate and a shipped source build at once.
+(candidate_named.keys & (manifest['source_build_formulae'] || []).map { |e| e.is_a?(Hash) ? e['formula'] : nil }).each do |name|
+  fail!(failures, "#{name} appears in both candidate_formulae and source_build_formulae")
 end
 
 # ------------------------------------------------------- source build formulae
@@ -255,6 +287,7 @@ TAP_ARTIFACT_HOST = %r{\Ahttps://github\.com/x86MacBrew/}i
 # asserting what its source actually is.
 tap_owned = 0
 source_tier = 0
+candidate_tier = 0
 formulae.each do |path|
   body = File.read(path)
   name = File.basename(path, '.rb')
@@ -280,12 +313,20 @@ formulae.each do |path|
       fail!(failures, "#{path} url does not match source_releases entry #{name} #{version}")
     end
   else
-    source_tier += 1
     entry = source_built[name]
     if entry.nil?
-      fail!(failures, "#{path} has no source_build_formulae entry; every shipped formula must be recorded")
+      # Not promoted: it must at least be pinned as a candidate.
+      cand = candidate_named[name]
+      if cand.nil?
+        fail!(failures, "#{path} is in neither source_build_formulae nor candidate_formulae; every shipped formula must be recorded")
+      elsif cand['source_sha256'] != sha
+        fail!(failures, "#{path} sha256 does not match candidate_formulae entry for #{name}")
+      else
+        candidate_tier += 1
+      end
       next
     end
+    source_tier += 1
     unless entry['source_sha256'] == sha
       fail!(failures, "#{path} sha256 does not match source_build_formulae entry for #{name}")
     end
@@ -309,6 +350,7 @@ if failures.empty?
   puts "PASS  #{formulae.length} formula file(s): class name, HTTPS, checksum, tap dependencies"
   puts "PASS  #{tap_owned} tap-owned artifact(s) match source_releases"
   puts "PASS  #{source_tier} source-build formula(e) match source_build_formulae"
+  puts "PASS  #{candidate_tier} candidate formula(e) pinned but unshipped" if candidate_tier > 0
 else
   failures.each { |message| warn "FAIL  #{message}" }
   abort "#{failures.length} validation failure(s)"

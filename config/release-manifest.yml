@@ -1,6 +1,9 @@
 # Single source of truth for every artifact x86MacBrew publishes.
 #
 # source_releases  signed source archives (tooling this project itself ships)
+# candidate_formulae
+#                  formulae under evaluation on a candidates/* branch. They
+#                  are NOT shipped: main must always carry an empty list.
 # source_build_formulae
 #                  third-party formulae the tap ships as SOURCE ONLY. brew
 #                  compiles these on the user's machine. They are not
@@ -36,6 +39,7 @@ source_releases:
     sha256: 0dec6a5a8b75762ae69b141a85f4df2b829cf9d3f82daca31c800a0bd92ebe3f
     prerelease: true
     signed: false
+candidate_formulae: []
 source_build_formulae:
   - formula: oniguruma
     version: 6.9.10

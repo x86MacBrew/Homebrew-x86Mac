@@ -102,6 +102,27 @@ must_reject "a source-tier entry for a formula the tap lacks" \
 must_reject "a source-tier entry pointing at missing evidence" \
   "sed -i '' 's|    evidence: docs/evidence/2026-09-11-second-environment-validation.md|    evidence: docs/evidence/nope.md|' config/release-manifest.yml"
 
+# --- candidate tier -------------------------------------------------------
+# awk avoids nesting quotes inside the shell string passed to must_reject.
+splice_candidate() {
+  awk -v name="$1" -v ver="$2" -v st="$3" '
+    /^candidate_formulae: \[\]$/ {
+      print "candidate_formulae:"
+      print "  - formula: " name
+      print "    version: " ver
+      print "    source_sha256: 71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af"
+      print "    status: " st
+      next
+    }
+    { print }
+  ' config/release-manifest.yml > .mf.tmp && mv .mf.tmp config/release-manifest.yml
+}
+
+must_reject "a candidate entry with a bogus status" \
+  "splice_candidate jqx 1.0 promoted"
+must_reject "a candidate that is also a shipped source build" \
+  "splice_candidate jq 1.8.2 candidate"
+
 # --- manifest schema ------------------------------------------------------
 must_reject "a source release with a bad checksum" \
   "sed -i '' 's/    sha256: 86fd.*/    sha256: deadbeef/' config/release-manifest.yml"

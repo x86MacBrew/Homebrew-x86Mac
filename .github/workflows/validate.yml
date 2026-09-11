@@ -18,3 +18,7 @@ jobs:
         run: scripts/test-doctor.sh
       - name: Test that the validator rejects what it claims to
         run: scripts/test-validator.sh
+      - name: Stable-branch invariants
+        # Candidates must never reach users by being merged to main.
+        if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+        run: scripts/check-stable-branch.sh
