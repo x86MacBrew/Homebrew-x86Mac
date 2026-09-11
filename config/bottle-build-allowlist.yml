@@ -1,0 +1,6 @@
+# Formulae explicitly approved for a protected Intel bottle-build dispatch.
+#
+# This is an authorization gate, not a publication record. A formula remains
+# unsupported until its bottle, independent clean-host test evidence and
+# provenance are added to config/release-manifest.yml.
+approved_formulae: []

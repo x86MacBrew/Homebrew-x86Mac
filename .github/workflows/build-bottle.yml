@@ -8,16 +8,21 @@ on:
         type: string
 permissions:
   contents: read
+env:
+  HOMEBREW_NO_AUTO_UPDATE: 1
+  HOMEBREW_NO_ENV_HINTS: 1
+  # This runner is a dedicated Intel builder; see scripts/build-bottle.sh.
+  X86MACBREW_BUILDER: 1
 jobs:
   build:
     # Protected dispatch only. Never expose persistent Intel builders to PR code.
     runs-on: [self-hosted, macos, x86_64, x86macbrew-macos15]
     environment: bottle-build
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: scripts/check-repository.sh
       - run: scripts/build-bottle.sh "${{ inputs.formula }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: x86macbrew-${{ inputs.formula }}
           path: |

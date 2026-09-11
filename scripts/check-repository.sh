@@ -5,6 +5,7 @@ cd "$repository_root"
 ruby -ryaml -rdate <<'RUBY'
 SUPPORT_PATH = 'config/support.yml'
 MANIFEST_PATH = 'config/release-manifest.yml'
+ALLOWLIST_PATH = 'config/bottle-build-allowlist.yml'
 SHA256 = /\A[0-9a-f]{64}\z/
 
 failures = []
@@ -31,9 +32,11 @@ end
 
 support = load_yaml(SUPPORT_PATH)
 manifest = load_yaml(MANIFEST_PATH)
+allowlist = load_yaml(ALLOWLIST_PATH)
 
 abort 'FAIL  support policy must be a mapping' unless support.is_a?(Hash)
 abort 'FAIL  manifest must be a mapping' unless manifest.is_a?(Hash)
+abort 'FAIL  bottle build allowlist must be a mapping' unless allowlist.is_a?(Hash)
 
 # ---------------------------------------------------------------- support policy
 [
@@ -181,6 +184,33 @@ formulae.each do |path|
       fail!(failures, "#{path} depends on #{value}, which this tap does not define")
     end
   end
+end
+
+# ----------------------------------------------------- bottle build authorization
+# A protected manual builder is still powerful enough to run arbitrary formula
+# code. It may build only formulae named in this reviewed allowlist. Publishing
+# a bottle remains a separate manifest and provenance decision.
+unless allowlist.key?('approved_formulae')
+  fail!(failures, 'bottle build allowlist must define approved_formulae')
+end
+
+approved_formulae = allowlist['approved_formulae']
+unless approved_formulae.is_a?(Array)
+  fail!(failures, 'bottle build allowlist approved_formulae must be an array')
+  approved_formulae = []
+end
+
+known_formulae = formulae.map { |path| File.basename(path, '.rb') }
+approved_formulae.each do |formula|
+  unless formula.is_a?(String) && formula.match?(/\A[A-Za-z0-9@+_.-]+\z/)
+    fail!(failures, 'bottle build allowlist contains an invalid formula name')
+    next
+  end
+  fail!(failures, "bottle build allowlist names unknown formula #{formula}") unless known_formulae.include?(formula)
+end
+
+if approved_formulae.uniq.length != approved_formulae.length
+  fail!(failures, 'bottle build allowlist contains duplicate formula names')
 end
 
 # A formula this project publishes itself must point at an artifact the

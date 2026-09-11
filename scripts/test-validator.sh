@@ -90,6 +90,12 @@ must_reject "a source release served over plain HTTP" \
 must_reject "a missing manifest key" \
   "sed -i '' '/^bottles: \[\]/d' config/release-manifest.yml"
 
+# --- bottle build authorization ------------------------------------------
+must_reject "a bottle allowlist with an unknown formula" \
+  "printf 'approved_formulae:\\n  - missing-formula\\n' > config/bottle-build-allowlist.yml"
+must_reject "a bottle allowlist with a non-array value" \
+  "printf 'approved_formulae: missing-formula\\n' > config/bottle-build-allowlist.yml"
+
 # --- untrusted YAML -------------------------------------------------------
 # CI runs this script from the pull request's own checkout, so config files are
 # attacker-controlled on a fork PR.
