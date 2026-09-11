@@ -72,11 +72,30 @@ architecture, macOS major version, Homebrew prefix, and CPU baseline. It exits
 `0` when the host is supported, `1` when a check fails, and `2` when the policy
 cannot be read. Use `--json` for machine-readable output.
 
-Every artifact this project supports is listed in
+Every artifact this project ships is listed in
 [config/release-manifest.yml](config/release-manifest.yml) with its SHA-256.
 **Anything not listed there is unsupported, regardless of what appears on the
-releases page.** Since no bottles are published yet, there is currently nothing
-else to install.
+releases page.**
+
+### Two tiers, and the difference matters
+
+| Tier | What it means | What you get |
+| --- | --- | --- |
+| **Bottled** | Prebuilt binary, verified through the full release pipeline | **Nothing yet.** `bottles: []` |
+| **Source build** | The tap ships the formula; `brew` compiles it on your machine | `jq`, `oniguruma` |
+
+A source-build formula is **not** a supported binary. You are compiling it
+yourself, using your own toolchain, and the project is asserting only that the
+source archive matches a recorded checksum and that the build has been
+reproduced on the Intel environments named in its evidence file. Expect a
+multi-minute compile:
+
+```sh
+brew install x86macbrew/x86mac/jq      # builds jq and oniguruma from source
+```
+
+Validation evidence for each source-build formula is linked from
+[config/release-manifest.yml](config/release-manifest.yml).
 
 ## Migration for post-2027 Intel users
 

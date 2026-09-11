@@ -82,6 +82,26 @@ import pathlib
 p = pathlib.Path('config/release-manifest.yml'); s = p.read_text()
 p.write_text(s[:s.index('source_releases:')] + 'source_releases: []\n' + s[s.index('bottles: []'):])\""
 
+# --- source-build tier ----------------------------------------------------
+# Every shipped formula must be recorded in exactly one tier, and a source-tier
+# entry must not be able to claim bottle status without going through bottles[].
+must_reject "a formula with no tier entry at all" \
+  "python3 -c \"
+import pathlib
+p = pathlib.Path('config/release-manifest.yml'); s = p.read_text()
+i = s.index('  - formula: jq'); j = s.index('bottles: []')
+p.write_text(s[:i] + s[j:])\""
+must_reject "a source-tier entry claiming to be bottled" \
+  "sed -i '' 's/^    bottled: false/    bottled: true/' config/release-manifest.yml"
+must_reject "a source-tier checksum that disagrees with the formula" \
+  "sed -i '' 's/    source_sha256: 71b8/    source_sha256: 71b9/' config/release-manifest.yml"
+must_reject "a source-tier version that disagrees with the formula" \
+  "sed -i '' 's/^    version: 1.8.2/    version: 9.9.9/' config/release-manifest.yml"
+must_reject "a source-tier entry for a formula the tap lacks" \
+  "sed -i '' 's/^  - formula: jq/  - formula: notshipped/' config/release-manifest.yml"
+must_reject "a source-tier entry pointing at missing evidence" \
+  "sed -i '' 's|    evidence: docs/evidence/2026-09-11-second-environment-validation.md|    evidence: docs/evidence/nope.md|' config/release-manifest.yml"
+
 # --- manifest schema ------------------------------------------------------
 must_reject "a source release with a bad checksum" \
   "sed -i '' 's/    sha256: 86fd.*/    sha256: deadbeef/' config/release-manifest.yml"

@@ -2,21 +2,49 @@
 
 ## Stable public tap
 
-| Formula | Version | Target | Dependency closure | Result |
-| --- | --- | --- | --- | --- |
-| `x86macbrew-doctor` | 0.2.0 | Intel macOS 15 | None | Released as an unsigned prerelease. The v0.2.0 source archive passed reproducibility, extraction, and diagnostic checks. |
+### Bottled tier
 
-## Candidate branch
+**Empty.** No x86MacBrew bottle has been built, verified or published.
+`bottles: []` in [config/release-manifest.yml](../config/release-manifest.yml)
+is the authoritative statement of that.
 
-`oniguruma` 6.9.10 and `jq` 1.8.2 are retained on the
-[`candidates/jq-oniguruma`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/jq-oniguruma)
-branch. They are not shipped from `main` and are not supported for users.
+### Source-build tier
 
-| Formula | Direct-build observation | Promotion blocker |
+`brew` compiles these on the user's machine. They are not binaries this project
+distributes, and the claim is correspondingly narrow: the source archive
+matches a recorded checksum, and the build has been reproduced on the Intel
+environments named in the evidence.
+
+| Formula | Version | Environments | Evidence |
+| --- | --- | --- | --- |
+| `oniguruma` | 6.9.10 | 2 | [second-environment](evidence/2026-09-11-second-environment-validation.md) |
+| `jq` | 1.8.2 | 2 | [second-environment](evidence/2026-09-11-second-environment-validation.md) |
+
+Promoted 2026-09-11. Both installed from source, passed `brew test` and
+`brew audit --strict`, and `jq` linked against
+`/usr/local/opt/oniguruma/lib/libonig.5.dylib` — the tap's dependency, not
+jq's bundled Oniguruma fallback. `brew linkage --test` exited 0.
+
+This resolves the dependency-graph question left open by the first builder
+record, which had only observed the bundled fallback in a standalone test.
+
+### Project tooling
+
+| Formula | Version | Result |
 | --- | --- | --- |
-| `oniguruma` | The upstream release's generated `configure` script built on Intel macOS 15 and `onig-config --prefix` passed. | Install and test through the actual x86MacBrew tap on a clean host. |
-| `jq` | The source release built and returned `2` for `.bar`; this standalone test used jq's bundled Oniguruma fallback. | Verify the public formula's explicit x86MacBrew Oniguruma dependency graph on a clean host. |
+| `x86macbrew-doctor` | 0.2.0 | Released as an unsigned prerelease. The source archive passed reproducibility, extraction and diagnostic checks. |
 
-No x86MacBrew bottles have been published. A formula is promoted to `main`
-only after the source build, formula test, clean-host installation, runtime
-smoke test, artifact checksum, and provenance evidence are complete.
+## Outstanding gates before anything is bottled
+
+Source-build promotion deliberately does **not** clear these:
+
+- **Clean-host installation.** Both validation records ran on the same physical
+  machine. A formula silently depending on something already present there
+  would pass both and still fail for a new user.
+- **A clean Intel macOS volume**, or a second physical Intel Mac.
+- **Bottle build, checksum, provenance and clean-host runtime evidence**
+  recorded in the release manifest.
+- **macOS coverage beyond 15.7.7.** Both records used one OS and one toolchain.
+
+See [release-policy.md](release-policy.md) and
+[formula-scope-policy.md](formula-scope-policy.md).

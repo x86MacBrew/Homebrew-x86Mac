@@ -8,5 +8,7 @@
 | CPU baseline | `ssse3` | Checked by `x86macbrew-doctor` against host CPU features. |
 | Formula availability | Only artifacts in release manifest | No blanket parity guarantee with upstream package set. |
 | Published bottles | **None yet** | The project is pre-general-availability; see [governance.md](governance.md). |
+| Source-build formulae | `jq`, `oniguruma` | Compiled on the user's machine. Not a binary-distribution claim. |
+| Clean-host validation | **Not performed** | No independent clean Intel host or clean APFS volume exists yet. |
 | Artifact signing | Not implemented | Integrity currently rests on recorded SHA-256 values alone. |
 | Casks | No | Explicitly out of scope for this continuation tap. |

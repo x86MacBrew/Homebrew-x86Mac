@@ -55,7 +55,7 @@ unless requirements.is_a?(Array) && !requirements.empty?
 end
 
 # --------------------------------------------------------------------- manifest
-%w[release generated_at support_policy repositories security source_releases bottles].each do |key|
+%w[release generated_at support_policy repositories security source_releases source_build_formulae bottles].each do |key|
   fail!(failures, "missing manifest key #{key}") unless manifest.key?(key)
 end
 
@@ -102,6 +102,36 @@ Array(source_releases).each_with_index do |entry, index|
     fail!(failures, "source_releases[#{index}].url must use HTTPS")
   end
   released[[entry['artifact'], entry['version'].to_s]] = entry
+end
+
+# ------------------------------------------------------- source build formulae
+# Third-party formulae the tap ships as source. They are not bottled, so the
+# claim being audited here is narrower: that the tap's formula and the recorded
+# evidence describe the same source archive.
+source_build = manifest['source_build_formulae'] || []
+fail!(failures, 'source_build_formulae must be an array') unless source_build.is_a?(Array)
+
+source_built = {}
+Array(source_build).each_with_index do |entry, index|
+  unless entry.is_a?(Hash)
+    fail!(failures, "source_build_formulae[#{index}] must be a mapping")
+    next
+  end
+  %w[formula version source_sha256 bottled independent_environments evidence].each do |key|
+    fail!(failures, "source_build_formulae[#{index}].#{key} must be set") unless entry.key?(key)
+  end
+  unless entry['source_sha256'].to_s.match?(SHA256)
+    fail!(failures, "source_build_formulae[#{index}].source_sha256 must be 64 lowercase hex characters")
+  end
+  # A source-tier entry claiming to be bottled would bypass the bottle gates.
+  unless entry['bottled'] == false
+    fail!(failures, "source_build_formulae[#{index}].bottled must be false; a bottle belongs in bottles[]")
+  end
+  evidence = entry['evidence'].to_s
+  unless !evidence.empty? && File.file?(evidence)
+    fail!(failures, "source_build_formulae[#{index}].evidence must reference a file in this repository")
+  end
+  source_built[entry['formula']] = entry
 end
 
 # --------------------------------------------------------------------- bottles
@@ -219,40 +249,66 @@ end
 # Formulae that fetch from third-party upstreams are deliberately exempt.
 TAP_ARTIFACT_HOST = %r{\Ahttps://github\.com/x86MacBrew/}i
 
+# Every formula must be covered by exactly one tier: an artifact this project
+# publishes itself (source_releases) or a third-party source build
+# (source_build_formulae). A formula in neither would ship with nothing
+# asserting what its source actually is.
 tap_owned = 0
+source_tier = 0
 formulae.each do |path|
   body = File.read(path)
   name = File.basename(path, '.rb')
   url = body[/^\s*url\s+"([^"]+)"/, 1]
-  next if url.nil? || !url.match?(TAP_ARTIFACT_HOST)
-
-  tap_owned += 1
   version = body[/^\s*version\s+"([^"]+)"/, 1]
   sha = body[/^\s*sha256\s+"([^"]+)"/, 1]
 
-  if version.nil?
-    fail!(failures, "#{path} publishes a tap-owned artifact and must declare a version")
-    next
+  if url && url.match?(TAP_ARTIFACT_HOST)
+    tap_owned += 1
+    if version.nil?
+      fail!(failures, "#{path} publishes a tap-owned artifact and must declare a version")
+      next
+    end
+    entry = released[[name, version]]
+    if entry.nil?
+      fail!(failures, "#{path} points at tap-owned #{name} #{version}, which has no source_releases entry")
+      next
+    end
+    unless entry['sha256'] == sha
+      fail!(failures, "#{path} sha256 does not match source_releases entry #{name} #{version}")
+    end
+    unless url == entry['url']
+      fail!(failures, "#{path} url does not match source_releases entry #{name} #{version}")
+    end
+  else
+    source_tier += 1
+    entry = source_built[name]
+    if entry.nil?
+      fail!(failures, "#{path} has no source_build_formulae entry; every shipped formula must be recorded")
+      next
+    end
+    unless entry['source_sha256'] == sha
+      fail!(failures, "#{path} sha256 does not match source_build_formulae entry for #{name}")
+    end
+    # Homebrew infers the version from the url when no version stanza exists,
+    # so compare against the url when the formula does not state one.
+    stated = version || url.to_s
+    unless version.nil? ? stated.include?(entry['version'].to_s) : version == entry['version'].to_s
+      fail!(failures, "#{path} version does not match source_build_formulae entry #{entry['version']} for #{name}")
+    end
   end
+end
 
-  entry = released[[name, version]]
-  if entry.nil?
-    fail!(failures, "#{path} points at tap-owned #{name} #{version}, which has no source_releases entry")
-    next
-  end
-
-  unless entry['sha256'] == sha
-    fail!(failures, "#{path} sha256 does not match source_releases entry #{name} #{version}")
-  end
-  unless url == entry['url']
-    fail!(failures, "#{path} url does not match source_releases entry #{name} #{version}")
-  end
+# An entry naming a formula the tap does not ship is a stale claim.
+source_built.each_key do |name|
+  next if formulae.any? { |f| File.basename(f, '.rb') == name }
+  fail!(failures, "source_build_formulae names #{name}, which this tap does not define")
 end
 
 if failures.empty?
   puts "PASS  support policy and release manifest schema"
   puts "PASS  #{formulae.length} formula file(s): class name, HTTPS, checksum, tap dependencies"
-  puts "PASS  #{tap_owned} tap-owned artifact(s) match their source_releases entry"
+  puts "PASS  #{tap_owned} tap-owned artifact(s) match source_releases"
+  puts "PASS  #{source_tier} source-build formula(e) match source_build_formulae"
 else
   failures.each { |message| warn "FAIL  #{message}" }
   abort "#{failures.length} validation failure(s)"

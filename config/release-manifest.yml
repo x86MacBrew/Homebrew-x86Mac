@@ -1,6 +1,10 @@
 # Single source of truth for every artifact x86MacBrew publishes.
 #
 # source_releases  signed source archives (tooling this project itself ships)
+# source_build_formulae
+#                  third-party formulae the tap ships as SOURCE ONLY. brew
+#                  compiles these on the user's machine. They are not
+#                  bottled and carry no binary-distribution claim.
 # bottles          precompiled Intel binaries promoted through the full
 #                  build -> test -> clean-host install -> smoke test pipeline
 #
@@ -32,4 +36,17 @@ source_releases:
     sha256: 0dec6a5a8b75762ae69b141a85f4df2b829cf9d3f82daca31c800a0bd92ebe3f
     prerelease: true
     signed: false
+source_build_formulae:
+  - formula: oniguruma
+    version: 6.9.10
+    source_sha256: 2a5cfc5ae259e4e97f86b68dfffc152cdaffe94e2060b770cb827238d769fc05
+    bottled: false
+    independent_environments: 2
+    evidence: docs/evidence/2026-09-11-second-environment-validation.md
+  - formula: jq
+    version: 1.8.2
+    source_sha256: 71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af
+    bottled: false
+    independent_environments: 2
+    evidence: docs/evidence/2026-09-11-second-environment-validation.md
 bottles: []
