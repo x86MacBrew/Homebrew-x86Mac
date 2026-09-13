@@ -20,22 +20,58 @@ mkdir -p "$template"
 ( cd "$repository_root" && tar -cf - --exclude .git --exclude dist . ) | ( cd "$template" && tar -xf - )
 
 # must_reject <name> <shell fragment that breaks the tree>
+# Fingerprint every path and its content, so a mutation that renames a file
+# still registers as a change.
+tree_hash() {
+  ( cd "$1" && find . -type f ! -name '.mf.tmp' -exec shasum -a 256 {} + | LC_ALL=C sort ) \
+    | shasum -a 256 | awk '{print $1}'
+}
+
+# must_reject <name> <shell fragment that breaks the tree> [expected failure text]
+#
+# A rejection only counts if the case genuinely exercised the rule. Three ways
+# a case can appear to pass without testing anything are each reported as a
+# failure of the test itself:
+#   - the mutation errored, so the validator never ran
+#   - the mutation matched nothing, so the tree was still valid
+#   - the validator rejected the tree, but for some other reason
 must_reject() {
-  name=$1; break_it=$2
+  name=$1; break_it=$2; expect=${3:-}
   case_dir="$work/case"
   rm -rf "$case_dir"
   cp -R "$template" "$case_dir"
+  before=$(tree_hash "$case_dir")
+
   set +e
-  ( cd "$case_dir" && eval "$break_it" >/dev/null 2>&1 && scripts/check-repository.sh >/dev/null 2>"$work/err" )
+  ( cd "$case_dir" && eval "$break_it" ) >"$work/mut" 2>&1
+  mut_status=$?
+  set -e
+  if [ "$mut_status" -ne 0 ]; then
+    printf 'FAIL    %s: the mutation itself failed (exit %s), so nothing was tested\n' "$name" "$mut_status" >&2
+    sed 's/^/          /' "$work/mut" >&2
+    failed=$((failed + 1)); return
+  fi
+  if [ "$(tree_hash "$case_dir")" = "$before" ]; then
+    printf 'FAIL    %s: the mutation changed nothing, so nothing was tested\n' "$name" >&2
+    failed=$((failed + 1)); return
+  fi
+
+  set +e
+  ( cd "$case_dir" && scripts/check-repository.sh ) >/dev/null 2>"$work/err"
   status=$?
   set -e
-  if [ "$status" -ne 0 ]; then
-    printf 'ok      rejects %s\n' "$name"
-    passed=$((passed + 1))
-  else
+  if [ "$status" -eq 0 ]; then
     printf 'FAIL    accepted %s\n' "$name" >&2
-    failed=$((failed + 1))
+    failed=$((failed + 1)); return
   fi
+  if [ -n "$expect" ] && ! grep -Fq -- "$expect" "$work/err"; then
+    printf 'FAIL    %s: rejected, but for a different reason\n' "$name" >&2
+    printf '          expected: %s\n' "$expect" >&2
+    grep FAIL "$work/err" | head -3 | sed 's/^/          got:      /' >&2
+    failed=$((failed + 1)); return
+  fi
+  printf 'ok      rejects %s\n' "$name"
+  passed=$((passed + 1))
 }
 
 # The unmodified tree must pass, or every rejection below proves nothing.
@@ -105,23 +141,29 @@ must_reject "a source-tier entry pointing at missing evidence" \
 # --- candidate tier -------------------------------------------------------
 # awk avoids nesting quotes inside the shell string passed to must_reject.
 splice_candidate() {
+  # Works whether the branch has no candidates (candidate_formulae: []) or
+  # already carries some. Existing entries are preserved, so on a candidate
+  # branch the test entry is rejected for its own defect rather than because a
+  # real candidate lost its manifest record.
   awk -v name="$1" -v ver="$2" -v st="$3" '
-    /^candidate_formulae: \[\]$/ {
-      print "candidate_formulae:"
+    function emit() {
       print "  - formula: " name
       print "    version: " ver
       print "    source_sha256: 71b8d6e8f5fe81f6c6d0d110e3892251f6ce76ed095abd315e26e6e1193af3af"
       print "    status: " st
-      next
     }
+    /^candidate_formulae: \[\]$/ { print "candidate_formulae:"; emit(); next }
+    /^candidate_formulae:$/        { print; emit(); next }
     { print }
   ' config/release-manifest.yml > .mf.tmp && mv .mf.tmp config/release-manifest.yml
 }
 
 must_reject "a candidate entry with a bogus status" \
-  "splice_candidate jqx 1.0 promoted"
+  "splice_candidate jqx 1.0 promoted" \
+  "status must be 'candidate'"
 must_reject "a candidate that is also a shipped source build" \
-  "splice_candidate jq 1.8.2 candidate"
+  "splice_candidate jq 1.8.2 candidate" \
+  "jq appears in both candidate_formulae and source_build_formulae"
 
 # --- manifest schema ------------------------------------------------------
 must_reject "a source release with a bad checksum" \
