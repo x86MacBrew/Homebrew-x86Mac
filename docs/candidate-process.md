@@ -50,6 +50,20 @@ brew audit --strict x86macbrew/x86mac/<name>
 brew linkage --test x86macbrew/x86mac/<name>
 ```
 
+### Build priority
+
+Homebrew runs **every** formula build under `nice`, which lowers its scheduling
+priority by 10 (`Library/Homebrew/formula_installer.rb`, `build_args`). There is
+no environment variable to opt out, and raising the priority of a user-owned
+process back to normal needs elevated privileges. Running the command in the
+foreground does not change this.
+
+`nice` only costs time when the CPU is contended, so a candidate build on a busy
+machine can take many times longer than on an idle one. Close other CPU-heavy
+work before validating. Two `git` attempts on 2026-09-11 and 2026-09-13 both
+stalled in `gettext`'s nested `configure` for this reason, so `git`'s real
+install time is still unmeasured.
+
 Then a runtime smoke test that exercises the tool's actual purpose, and
 `otool -L` on the installed binary to confirm it links what the formula
 declares rather than a bundled fallback.
