@@ -9,21 +9,24 @@ while separating three components that can evolve independently.
 > lists Intel macOS as Tier 3, has stopped building new Intel bottles, and plans
 > to remove Intel execution support in or after September 2027.
 
-## Project status: pre-general-availability
+## Project status: limited source-build beta
 
-**Do not depend on this project yet.**
+**This is not a bottle distribution or a production support service.**
 
 | | |
 | --- | --- |
 | Bottles published | **None** |
-| Source releases | `x86macbrew-doctor` 0.2.0 (prerelease, unsigned) |
+| Source-build formulas | `jq` 1.8.2 and `oniguruma` 6.9.10 |
+| Project source release | `x86macbrew-doctor` 0.2.0 (prerelease, unsigned) |
 | Artifact signing | Not implemented |
 | Maintainers | 1 |
 
-What works today is the diagnostic, the support policy, and the validation and
-release process. What does not exist yet is a binary distribution. The tap is
-public so the process can be reviewed in the open, not because the support
-contract is being honoured yet. The remaining gates are listed in
+What works today is the diagnostic and the listed source-build formulas. The
+source archives are checksum-pinned, and those formula builds have been
+reproduced on the Intel environments linked from
+[docs/package-status.md](docs/package-status.md). What does not exist yet is a
+binary distribution, artifact signing, clean-host validation, or a published
+client installer. The remaining gates are listed in
 [docs/governance.md](docs/governance.md).
 
 ## Components
@@ -32,7 +35,7 @@ contract is being honoured yet. The remaining gates are listed in
 | --- | --- | --- |
 | Compatibility client | `x86macbrew/brew` | Keep the `brew` command runnable on supported Intel macOS after upstream removal. |
 | Formula catalogue | `x86macbrew/homebrew-core` | Carry Intel-focused formula revisions, pins, and fixes. |
-| This distribution tap | `x86macbrew/homebrew-x86mac` | Publish approved Intel bottles and ship `x86macbrew-doctor`. |
+| This distribution tap | `x86macbrew/homebrew-x86mac` | Publish source-build formula metadata, future approved Intel bottles and `x86macbrew-doctor`. |
 
 This repository is the distribution tap. It publishes release metadata and
 tooling for a supported Intel host.
@@ -53,11 +56,11 @@ tooling for a supported Intel host.
 
 See [config/support.yml](config/support.yml) for machine-readable policy.
 
-Experimental formula candidates are maintained outside the stable public tap
-on the [`candidates/jq-oniguruma`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/jq-oniguruma)
-branch. Their build observations are recorded in
-[docs/package-status.md](docs/package-status.md); they are not supported
-formulae and are intentionally unavailable from `main`.
+`jq` and `oniguruma` are stable source-build formulas in `main`. The active
+experimental candidate is maintained on the
+[`candidates/git`](https://github.com/x86MacBrew/Homebrew-x86Mac/tree/candidates/git)
+branch. Candidates make no user-support claim and are intentionally unavailable
+from `main`.
 
 ## User workflow
 
@@ -65,6 +68,7 @@ formulae and are intentionally unavailable from `main`.
 brew tap x86macbrew/x86mac
 brew install x86macbrew/x86mac/x86macbrew-doctor
 x86macbrew-doctor
+brew install x86macbrew/x86mac/jq
 ```
 
 `x86macbrew-doctor` reports whether this host matches the support policy:
@@ -96,6 +100,15 @@ brew install x86macbrew/x86mac/jq      # builds jq and oniguruma from source
 
 Validation evidence for each source-build formula is linked from
 [config/release-manifest.yml](config/release-manifest.yml).
+
+### Current bootstrap path
+
+Use an existing Intel Homebrew-compatible client at `/usr/local` to tap this
+repository and install the listed source-build formulas. The x86MacBrew client
+fork now has a maintained default branch, but x86MacBrew has not yet published
+a clean-host-tested installer or client migration procedure. Do not replace a
+working `/usr/local` installation with a manual Git checkout solely to use this
+tap.
 
 ## Migration for post-2027 Intel users
 
