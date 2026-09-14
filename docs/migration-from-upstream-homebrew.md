@@ -10,14 +10,36 @@ This guide is for Intel users after upstream Homebrew ends Intel support.
 
 ## Migration path
 
-1. Run `x86macbrew-doctor` and resolve any host compatibility failures.
-2. Tap the distribution repository.
-3. Install only formulae that are present in the signed release manifest.
-4. For formulas outside scope, either keep them self-managed or remove them.
-5. When the client fork is announced as required, switch from upstream `brew` to `x86macbrew/brew` using the client repository migration instructions.
+1. Tap the distribution repository:
+
+   ```sh
+   brew tap x86macbrew/x86mac
+   ```
+
+2. Install and run the host diagnostic:
+
+   ```sh
+   brew install x86macbrew/x86mac/x86macbrew-doctor
+   x86macbrew-doctor
+   ```
+
+3. Install only formulae in the stable source-build or bottled tiers. For
+   example, the current source-build tier includes:
+
+   ```sh
+   brew install x86macbrew/x86mac/jq
+   ```
+
+4. Treat source-build formulas as local compilation, not as x86MacBrew binary
+   releases. No bottles have been published.
+5. For formulas outside scope, either keep them self-managed or remove them.
+6. Keep a working upstream `/usr/local` client as the bootstrap path until
+   x86MacBrew publishes a clean-host-tested client installer and migration
+   procedure. Do not substitute a manual Git checkout for that installer.
 
 ## Ongoing operations
 
-- Use only x86MacBrew-published bottle versions for supported packages.
+- Use the stable source-build tier only for the listed formulas. Use published
+  bottles only after x86MacBrew actually lists them in the release manifest.
 - Re-run `x86macbrew-doctor` after major OS updates or machine changes.
 - Follow project advisories for bottle withdrawals or emergency revocations.
